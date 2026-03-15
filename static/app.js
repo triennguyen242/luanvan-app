@@ -12,6 +12,7 @@ function addLog(message) {
 
   const item = document.createElement("div");
   item.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
+  item.classList.add("log-item");
   logBox.prepend(item);
 }
 
@@ -41,7 +42,9 @@ async function startStream() {
     const data = await res.json();
 
     if (data.enabled) {
-      document.getElementById("statusText").textContent = "Đã kết nối";
+      const statusText = document.getElementById("statusText");
+      if (statusText) statusText.textContent = "Đã kết nối";
+
       addLog("Đã bật nhận dữ liệu từ thiết bị.");
       refreshPreview();
     }
@@ -59,12 +62,54 @@ async function stopStream() {
     const data = await res.json();
 
     if (!data.enabled) {
-      document.getElementById("statusText").textContent = "Đã ngắt";
+      const statusText = document.getElementById("statusText");
+      if (statusText) statusText.textContent = "Đã ngắt";
+
       addLog("Đã tắt nhận dữ liệu từ thiết bị.");
     }
   } catch (err) {
     addLog("Không tắt được kết nối.");
   }
+}
+
+function renderDetectionResults(data) {
+  const resultList = document.getElementById("resultList");
+  if (!resultList) return;
+
+  // Nếu server chưa trả detection thật, hiển thị theo trạng thái ảnh
+  if (!data.image_url) {
+    resultList.innerHTML = `
+      <div class="result-empty">Chưa có dữ liệu nhận diện</div>
+    `;
+    return;
+  }
+
+  // Nếu sau này server có field detections thật thì ưu tiên dùng
+  if (Array.isArray(data.detections) && data.detections.length > 0) {
+    resultList.innerHTML = data.detections.map(item => `
+      <div class="result-item fade-item">
+        <strong>${item.label}</strong>
+        <span>Độ tin cậy: ${item.confidence}</span>
+      </div>
+    `).join("");
+    return;
+  }
+
+  // Tạm thời nếu chưa có detections thật thì hiện trạng thái từ ảnh mới nhất
+  resultList.innerHTML = `
+    <div class="result-item fade-item">
+      <strong>Ảnh mới đã nhận</strong>
+      <span>Thiết bị: ${data.device || "Không xác định"}</span>
+    </div>
+    <div class="result-item fade-item">
+      <strong>Thời gian</strong>
+      <span>${data.time || "--:--:--"}</span>
+    </div>
+    <div class="result-item fade-item">
+      <strong>Trạng thái</strong>
+      <span>Đã cập nhật khung xem hiện tại</span>
+    </div>
+  `;
 }
 
 async function refreshPreview() {
@@ -84,6 +129,7 @@ async function refreshPreview() {
       img.src = data.image_url + "?t=" + Date.now();
       img.classList.remove("hidden");
       img.style.display = "block";
+      img.classList.add("pulse-frame");
 
       placeholder.classList.add("hidden");
       placeholder.style.display = "none";
@@ -98,6 +144,10 @@ async function refreshPreview() {
     if (deviceText && data.device) {
       deviceText.textContent = data.device;
     }
+
+    // Cập nhật luôn cột kết quả nhận diện theo dữ liệu mới nhất
+    renderDetectionResults(data);
+
   } catch (err) {
     addLog("Không tải được khung hình hiện tại.");
   }
@@ -108,15 +158,15 @@ function runDetectDemo() {
   if (!resultList) return;
 
   resultList.innerHTML = `
-    <div class="result-item">
+    <div class="result-item fade-item">
       <strong>Bọ cánh cứng</strong>
       <span>Độ tin cậy: 0.95</span>
     </div>
-    <div class="result-item">
+    <div class="result-item fade-item">
       <strong>Bướm</strong>
       <span>Độ tin cậy: 0.88</span>
     </div>
-    <div class="result-item">
+    <div class="result-item fade-item">
       <strong>Châu chấu</strong>
       <span>Độ tin cậy: 0.91</span>
     </div>
