@@ -29,7 +29,6 @@ img {
   margin: 0 auto;
 }
 
-/* Card nền chung */
 .home-card,
 .card {
   background: rgba(14, 24, 45, 0.88);
@@ -38,9 +37,6 @@ img {
   backdrop-filter: blur(10px);
 }
 
-/* =========================
-   TRANG CHỦ
-========================= */
 .home-card {
   min-height: calc(100vh - 48px);
   border-radius: 28px;
@@ -136,9 +132,6 @@ img {
   justify-content: center;
 }
 
-/* =========================
-   BUTTONS
-========================= */
 .main-btn,
 .sub-btn {
   border: none;
@@ -172,9 +165,6 @@ img {
   font-weight: 600;
 }
 
-/* =========================
-   TRANG CONNECT
-========================= */
 .connect-header {
   border-radius: 24px;
   padding: 22px 24px;
@@ -211,6 +201,7 @@ img {
   padding: 20px;
   min-height: 420px;
   transition: transform 0.2s ease, box-shadow 0.2s ease;
+  overflow: hidden;
 }
 
 .card-head {
@@ -256,6 +247,9 @@ img {
   display: flex;
   flex-direction: column;
   gap: 12px;
+  max-height: 320px;
+  overflow-y: auto;
+  padding-right: 4px;
 }
 
 .result-item {
@@ -269,6 +263,14 @@ img {
   display: block;
   margin-bottom: 6px;
   font-size: 18px;
+}
+
+.result-item span {
+  display: block;
+  margin-top: 4px;
+  color: #d6e3f7;
+  font-size: 14px;
+  line-height: 1.5;
 }
 
 .status-grid {
@@ -302,20 +304,24 @@ img {
   line-height: 1.6;
 }
 
-/* =========================
-   HOVER
-========================= */
 .info-card:hover,
 .status-card:hover,
 .panel-card:hover,
-.log-card:hover {
+.log-card:hover,
+.history-item:hover {
   transform: translateY(-2px);
   box-shadow: 0 20px 45px rgba(0, 0, 0, 0.22);
 }
 
-/* =========================
-   HIỆU ỨNG
-========================= */
+.history-item {
+  cursor: pointer;
+  transition: 0.2s ease;
+}
+
+.history-item:hover {
+  background: rgba(255, 255, 255, 0.07);
+}
+
 .hidden {
   display: none !important;
 }
@@ -369,9 +375,6 @@ img {
   }
 }
 
-/* =========================
-   RESPONSIVE
-========================= */
 @media (max-width: 900px) {
   .top-box {
     grid-template-columns: 1fr;
