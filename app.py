@@ -5,8 +5,11 @@ from fastapi.templating import Jinja2Templates
 from pathlib import Path
 import shutil
 from datetime import datetime, timedelta
+from zoneinfo import ZoneInfo
 
 app = FastAPI()
+
+VN_TZ = ZoneInfo("Asia/Ho_Chi_Minh")
 
 UPLOAD_DIR = Path("uploads")
 UPLOAD_DIR.mkdir(exist_ok=True)
@@ -24,7 +27,6 @@ latest_device = "Chưa có dữ liệu"
 latest_time = "--:--"
 latest_upload_dt = None
 
-# Danh sách phát hiện, mới nhất nằm đầu
 detection_history = []
 
 
@@ -47,7 +49,7 @@ async def health():
 async def get_stream_status():
     connected = False
     if latest_upload_dt and stream_enabled:
-        connected = (datetime.now() - latest_upload_dt) <= timedelta(seconds=12)
+        connected = (datetime.now(VN_TZ) - latest_upload_dt) <= timedelta(seconds=12)
 
     return {
         "enabled": stream_enabled,
@@ -73,7 +75,7 @@ async def stop_stream():
 async def latest_frame():
     connected = False
     if latest_upload_dt and stream_enabled:
-        connected = (datetime.now() - latest_upload_dt) <= timedelta(seconds=12)
+        connected = (datetime.now(VN_TZ) - latest_upload_dt) <= timedelta(seconds=12)
 
     return {
         "image_url": latest_frame_url,
@@ -106,7 +108,9 @@ async def upload_frame(
     if not stream_enabled:
         raise HTTPException(status_code=403, detail="Hệ thống chưa bật nhận dữ liệu")
 
-    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    now_vn = datetime.now(VN_TZ)
+
+    timestamp = now_vn.strftime("%Y%m%d_%H%M%S")
     ext = Path(file.filename).suffix or ".jpg"
     filename = f"frame_{timestamp}{ext}"
     save_path = UPLOAD_DIR / filename
@@ -116,8 +120,8 @@ async def upload_frame(
 
     latest_frame_url = f"/uploads/{filename}"
     latest_device = device
-    latest_time = datetime.now().strftime("%H:%M:%S")
-    latest_upload_dt = datetime.now()
+    latest_time = now_vn.strftime("%H:%M:%S")
+    latest_upload_dt = now_vn
 
     parsed_detections = []
     if detections.strip():
@@ -132,7 +136,6 @@ async def upload_frame(
             except ValueError:
                 pass
 
-    # Chỉ thêm vào lịch sử khi thật sự có phát hiện
     if parsed_detections:
         history_item = {
             "id": timestamp,
