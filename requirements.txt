@@ -2,6 +2,3 @@ fastapi
 uvicorn
 jinja2
 python-multipart
-requests
-opencv-python
-ultralytics
