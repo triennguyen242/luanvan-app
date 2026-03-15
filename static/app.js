@@ -76,7 +76,6 @@ function renderDetectionResults(data) {
   const resultList = document.getElementById("resultList");
   if (!resultList) return;
 
-  // Nếu server chưa trả detection thật, hiển thị theo trạng thái ảnh
   if (!data.image_url) {
     resultList.innerHTML = `
       <div class="result-empty">Chưa có dữ liệu nhận diện</div>
@@ -84,7 +83,6 @@ function renderDetectionResults(data) {
     return;
   }
 
-  // Nếu sau này server có field detections thật thì ưu tiên dùng
   if (Array.isArray(data.detections) && data.detections.length > 0) {
     resultList.innerHTML = data.detections.map(item => `
       <div class="result-item fade-item">
@@ -95,7 +93,6 @@ function renderDetectionResults(data) {
     return;
   }
 
-  // Tạm thời nếu chưa có detections thật thì hiện trạng thái từ ảnh mới nhất
   resultList.innerHTML = `
     <div class="result-item fade-item">
       <strong>Ảnh mới đã nhận</strong>
@@ -107,7 +104,7 @@ function renderDetectionResults(data) {
     </div>
     <div class="result-item fade-item">
       <strong>Trạng thái</strong>
-      <span>Đã cập nhật khung xem hiện tại</span>
+      <span>Chưa có nhãn nhận diện chi tiết</span>
     </div>
   `;
 }
@@ -145,33 +142,15 @@ async function refreshPreview() {
       deviceText.textContent = data.device;
     }
 
-    // Cập nhật luôn cột kết quả nhận diện theo dữ liệu mới nhất
     renderDetectionResults(data);
-
   } catch (err) {
     addLog("Không tải được khung hình hiện tại.");
   }
 }
 
 function runDetectDemo() {
-  const resultList = document.getElementById("resultList");
-  if (!resultList) return;
-
-  resultList.innerHTML = `
-    <div class="result-item fade-item">
-      <strong>Bọ cánh cứng</strong>
-      <span>Độ tin cậy: 0.95</span>
-    </div>
-    <div class="result-item fade-item">
-      <strong>Bướm</strong>
-      <span>Độ tin cậy: 0.88</span>
-    </div>
-    <div class="result-item fade-item">
-      <strong>Châu chấu</strong>
-      <span>Độ tin cậy: 0.91</span>
-    </div>
-  `;
-  addLog("Đã hiển thị dữ liệu nhận diện thử.");
+  refreshPreview();
+  addLog("Đã làm mới dữ liệu nhận diện.");
 }
 
 window.onload = () => {
