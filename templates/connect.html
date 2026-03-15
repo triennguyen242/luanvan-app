@@ -9,43 +9,20 @@
 <body>
   <div class="page-bg">
     <main class="connect-wrap fade-in">
+
       <section class="connect-header card">
-        <div>
-          <div class="school-badge">TRANG KẾT NỐI</div>
-          <h2>Hệ thống nhận diện côn trùng</h2>
+        <div style="display:flex; align-items:center; gap:14px;">
+          <img src="/static/ctu-logo-new.png" alt="Logo ĐHCT" class="header-logo" />
+          <div>
+            <div class="school-badge">TRANG KẾT NỐI</div>
+            <h2>Hệ thống nhận diện côn trùng</h2>
+          </div>
         </div>
 
         <div style="display:flex; gap:10px; flex-wrap:wrap;">
           <button class="sub-btn" onclick="startStream()">Kết nối</button>
           <button class="sub-btn" onclick="stopStream()">Ngắt kết nối</button>
           <button class="sub-btn" onclick="goHome()">Quay lại</button>
-        </div>
-      </section>
-
-      <section class="panel-grid">
-        <div class="card panel-card">
-          <div class="card-head">
-            <h3>Khung xem hiện tại</h3>
-            <button class="sub-btn" onclick="refreshPreview()">Làm mới</button>
-          </div>
-
-          <div class="viewer-box">
-            <img id="previewImage" src="" alt="Khung xem hiện tại" class="preview-image hidden" />
-            <div id="previewPlaceholder" class="placeholder">
-              Chưa có dữ liệu hình ảnh
-            </div>
-          </div>
-        </div>
-
-        <div class="card panel-card">
-          <div class="card-head">
-            <h3>Kết quả nhận diện</h3>
-            <button class="sub-btn" onclick="runDetectDemo()">Nhận diện thử</button>
-          </div>
-
-          <div id="resultList" class="result-list">
-            <div class="result-empty">Chưa có dữ liệu nhận diện</div>
-          </div>
         </div>
       </section>
 
@@ -66,6 +43,38 @@
         </div>
       </section>
 
+      <section class="panel-grid">
+        <div class="card panel-card">
+          <div class="card-head">
+            <h3>Khung xem hiện tại</h3>
+            <button class="sub-btn" onclick="refreshPreview()">Làm mới</button>
+          </div>
+
+          <div class="viewer-box">
+            <img
+              id="previewImage"
+              src=""
+              alt="Khung xem hiện tại"
+              class="preview-image hidden"
+            />
+            <div id="previewPlaceholder" class="placeholder">
+              Chưa có dữ liệu hình ảnh
+            </div>
+          </div>
+        </div>
+
+        <div class="card panel-card">
+          <div class="card-head">
+            <h3>Kết quả nhận diện</h3>
+            <button class="sub-btn" onclick="runDetectDemo()">Làm mới kết quả</button>
+          </div>
+
+          <div id="resultList" class="result-list">
+            <div class="result-empty">Chưa có dữ liệu nhận diện</div>
+          </div>
+        </div>
+      </section>
+
       <section class="card log-card">
         <div class="card-head">
           <h3>Nhật ký hệ thống</h3>
@@ -76,6 +85,7 @@
           <div>Hệ thống sẵn sàng.</div>
         </div>
       </section>
+
     </main>
   </div>
 
