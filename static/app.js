@@ -1,7 +1,3 @@
-function goHome() {
-  window.location.href = "/";
-}
-
 async function goToConnectPage() {
   try {
     await fetch("/api/start-stream", {
@@ -13,6 +9,10 @@ async function goToConnectPage() {
   }
 
   window.location.href = "/connect";
+}
+
+function goHome() {
+  window.location.href = "/";
 }
 
 function addLog(message) {
@@ -53,9 +53,16 @@ async function stopStream() {
     if (!data.enabled) {
       const statusText = document.getElementById("statusText");
       const deviceText = document.getElementById("deviceText");
+      const resultList = document.getElementById("resultList");
 
       if (statusText) statusText.textContent = "Đã ngắt";
       if (deviceText) deviceText.textContent = "Chưa có dữ liệu";
+
+      if (resultList) {
+        resultList.innerHTML = `
+          <div class="result-empty">Chưa có dữ liệu nhận diện</div>
+        `;
+      }
 
       addLog("Đã tắt nhận dữ liệu từ thiết bị.");
       refreshPreview();
@@ -95,6 +102,10 @@ function renderDetectionResults(data) {
       <strong>Thời gian</strong>
       <span>${data.time || "--:--:--"}</span>
     </div>
+    <div class="result-item fade-item">
+      <strong>Trạng thái</strong>
+      <span>Chưa có nhãn nhận diện chi tiết</span>
+    </div>
   `;
 }
 
@@ -129,7 +140,9 @@ async function refreshPreview() {
     }
 
     if (deviceText) {
-      deviceText.textContent = data.connected ? (data.device || "Thiết bị") : "Chưa có dữ liệu";
+      deviceText.textContent = data.connected
+        ? (data.device || "Thiết bị")
+        : "Chưa có dữ liệu";
     }
 
     if (statusText) {
