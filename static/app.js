@@ -98,8 +98,10 @@ function renderDetectionHistory(items) {
     return `
       <div class="result-item fade-item history-item" onclick="showHistoryImage('${item.image_url}')">
         <strong>${labels}</strong>
-        <span>Thiết bị: ${item.device}</span>
-        <span>Thời gian: ${item.time}</span>
+        <div class="result-meta">
+          <span>Thiết bị: ${item.device}</span>
+          <span>Thời gian: ${item.time}</span>
+        </div>
       </div>
     `;
   }).join("");
