@@ -1,9 +1,18 @@
-function goToConnectPage() {
-  window.location.href = "/connect";
-}
-
 function goHome() {
   window.location.href = "/";
+}
+
+async function goToConnectPage() {
+  try {
+    await fetch("/api/start-stream", {
+      method: "POST",
+      cache: "no-store"
+    });
+  } catch (err) {
+    console.log("Không bật được stream trước khi chuyển trang.");
+  }
+
+  window.location.href = "/connect";
 }
 
 function addLog(message) {
@@ -33,26 +42,6 @@ async function checkHealth() {
   }
 }
 
-async function startStream() {
-  try {
-    const res = await fetch("/api/start-stream", {
-      method: "POST",
-      cache: "no-store"
-    });
-    const data = await res.json();
-
-    if (data.enabled) {
-      const statusText = document.getElementById("statusText");
-      if (statusText) statusText.textContent = "Đã kết nối";
-
-      addLog("Đã bật nhận dữ liệu từ thiết bị.");
-      refreshPreview();
-    }
-  } catch (err) {
-    addLog("Không bật được kết nối.");
-  }
-}
-
 async function stopStream() {
   try {
     const res = await fetch("/api/stop-stream", {
@@ -63,9 +52,13 @@ async function stopStream() {
 
     if (!data.enabled) {
       const statusText = document.getElementById("statusText");
+      const deviceText = document.getElementById("deviceText");
+
       if (statusText) statusText.textContent = "Đã ngắt";
+      if (deviceText) deviceText.textContent = "Chưa có dữ liệu";
 
       addLog("Đã tắt nhận dữ liệu từ thiết bị.");
+      refreshPreview();
     }
   } catch (err) {
     addLog("Không tắt được kết nối.");
@@ -102,10 +95,6 @@ function renderDetectionResults(data) {
       <strong>Thời gian</strong>
       <span>${data.time || "--:--:--"}</span>
     </div>
-    <div class="result-item fade-item">
-      <strong>Trạng thái</strong>
-      <span>Chưa có nhãn nhận diện chi tiết</span>
-    </div>
   `;
 }
 
@@ -119,27 +108,38 @@ async function refreshPreview() {
     const img = document.getElementById("previewImage");
     const placeholder = document.getElementById("previewPlaceholder");
     const deviceText = document.getElementById("deviceText");
+    const statusText = document.getElementById("statusText");
 
-    if (!img || !placeholder) return;
+    if (img && placeholder) {
+      if (data.image_url) {
+        img.src = data.image_url + "?t=" + Date.now();
+        img.classList.remove("hidden");
+        img.style.display = "block";
+        img.classList.add("pulse-frame");
 
-    if (data.image_url) {
-      img.src = data.image_url + "?t=" + Date.now();
-      img.classList.remove("hidden");
-      img.style.display = "block";
-      img.classList.add("pulse-frame");
+        placeholder.classList.add("hidden");
+        placeholder.style.display = "none";
+      } else {
+        img.classList.add("hidden");
+        img.style.display = "none";
 
-      placeholder.classList.add("hidden");
-      placeholder.style.display = "none";
-    } else {
-      img.classList.add("hidden");
-      img.style.display = "none";
-
-      placeholder.classList.remove("hidden");
-      placeholder.style.display = "block";
+        placeholder.classList.remove("hidden");
+        placeholder.style.display = "block";
+      }
     }
 
-    if (deviceText && data.device) {
-      deviceText.textContent = data.device;
+    if (deviceText) {
+      deviceText.textContent = data.connected ? (data.device || "Thiết bị") : "Chưa có dữ liệu";
+    }
+
+    if (statusText) {
+      if (data.connected) {
+        statusText.textContent = "Đã kết nối";
+      } else if (data.enabled) {
+        statusText.textContent = "Đang chờ thiết bị";
+      } else {
+        statusText.textContent = "Đã ngắt";
+      }
     }
 
     renderDetectionResults(data);
