@@ -29,14 +29,18 @@ img {
   margin: 0 auto;
 }
 
+/* Card nền chung */
 .home-card,
 .card {
   background: rgba(14, 24, 45, 0.88);
-  border: 1px solid rgba(255,255,255,0.08);
-  box-shadow: 0 18px 50px rgba(0,0,0,0.28);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: 0 18px 50px rgba(0, 0, 0, 0.28);
   backdrop-filter: blur(10px);
 }
 
+/* =========================
+   TRANG CHỦ
+========================= */
 .home-card {
   min-height: calc(100vh - 48px);
   border-radius: 28px;
@@ -59,13 +63,13 @@ img {
   height: 130px;
   margin: 0 auto;
   border-radius: 50%;
-  background: rgba(255,255,255,0.08);
-  border: 1px solid rgba(255,255,255,0.1);
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.10);
   display: flex;
   align-items: center;
   justify-content: center;
   overflow: hidden;
-  box-shadow: inset 0 0 20px rgba(255,255,255,0.04);
+  box-shadow: inset 0 0 20px rgba(255, 255, 255, 0.04);
 }
 
 .logo {
@@ -100,19 +104,11 @@ img {
 }
 
 .info-card {
-  background: rgba(255,255,255,0.04);
-  border: 1px solid rgba(255,255,255,0.06);
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.06);
   border-radius: 18px;
   padding: 18px;
   transition: transform 0.2s ease, box-shadow 0.2s ease;
-}
-
-.info-card:hover,
-.status-card:hover,
-.panel-card:hover,
-.log-card:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 20px 45px rgba(0,0,0,0.22);
 }
 
 .info-card span,
@@ -140,6 +136,9 @@ img {
   justify-content: center;
 }
 
+/* =========================
+   BUTTONS
+========================= */
 .main-btn,
 .sub-btn {
   border: none;
@@ -164,15 +163,18 @@ img {
 }
 
 .sub-btn {
-  background: rgba(255,255,255,0.08);
+  background: rgba(255, 255, 255, 0.08);
   color: #eef4ff;
   padding: 12px 18px;
   border-radius: 14px;
-  border: 1px solid rgba(255,255,255,0.1);
+  border: 1px solid rgba(255, 255, 255, 0.10);
   font-size: 14px;
   font-weight: 600;
 }
 
+/* =========================
+   TRANG CONNECT
+========================= */
 .connect-header {
   border-radius: 24px;
   padding: 22px 24px;
@@ -187,6 +189,16 @@ img {
   font-size: 32px;
 }
 
+.header-logo {
+  width: 54px;
+  height: 54px;
+  object-fit: contain;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.08);
+  padding: 6px;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.18);
+}
+
 .panel-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -198,6 +210,7 @@ img {
   border-radius: 24px;
   padding: 20px;
   min-height: 420px;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
 }
 
 .card-head {
@@ -216,12 +229,13 @@ img {
 .viewer-box {
   height: 320px;
   border-radius: 18px;
-  background: linear-gradient(145deg, rgba(18,27,46,0.96), rgba(28,44,74,0.96));
-  border: 1px dashed rgba(255,255,255,0.12);
+  background: linear-gradient(145deg, rgba(18, 27, 46, 0.96), rgba(28, 44, 74, 0.96));
+  border: 1px dashed rgba(255, 255, 255, 0.12);
   display: flex;
   align-items: center;
   justify-content: center;
   overflow: hidden;
+  position: relative;
 }
 
 .preview-image {
@@ -235,6 +249,7 @@ img {
   color: #aabbd5;
   font-size: 16px;
   text-align: center;
+  padding: 20px;
 }
 
 .result-list {
@@ -244,8 +259,8 @@ img {
 }
 
 .result-item {
-  background: rgba(255,255,255,0.04);
-  border: 1px solid rgba(255,255,255,0.08);
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
   border-radius: 16px;
   padding: 16px;
 }
@@ -266,11 +281,13 @@ img {
 .status-card {
   border-radius: 20px;
   padding: 18px;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
 }
 
 .log-card {
   border-radius: 24px;
   padding: 20px;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
 }
 
 .log-box {
@@ -280,16 +297,43 @@ img {
   overflow: auto;
   padding: 16px;
   border-radius: 16px;
-  background: rgba(255,255,255,0.04);
+  background: rgba(255, 255, 255, 0.04);
   color: #d7e4f7;
+  line-height: 1.6;
 }
 
+/* =========================
+   HOVER
+========================= */
+.info-card:hover,
+.status-card:hover,
+.panel-card:hover,
+.log-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 20px 45px rgba(0, 0, 0, 0.22);
+}
+
+/* =========================
+   HIỆU ỨNG
+========================= */
 .hidden {
   display: none !important;
 }
 
 .fade-in {
   animation: fadeIn 0.45s ease;
+}
+
+.log-item {
+  animation: fadeSlideIn 0.35s ease;
+}
+
+.fade-item {
+  animation: fadeSlideIn 0.4s ease;
+}
+
+.pulse-frame {
+  animation: pulseBorder 0.8s ease;
 }
 
 @keyframes fadeIn {
@@ -303,6 +347,31 @@ img {
   }
 }
 
+@keyframes fadeSlideIn {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes pulseBorder {
+  0% {
+    transform: scale(0.99);
+    opacity: 0.9;
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+/* =========================
+   RESPONSIVE
+========================= */
 @media (max-width: 900px) {
   .top-box {
     grid-template-columns: 1fr;
@@ -333,5 +402,14 @@ img {
   .logo {
     width: 72px;
     height: 72px;
+  }
+
+  .header-logo {
+    width: 46px;
+    height: 46px;
+  }
+
+  .connect-header h2 {
+    font-size: 26px;
   }
 }
