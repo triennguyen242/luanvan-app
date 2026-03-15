@@ -53,16 +53,9 @@ async function stopStream() {
     if (!data.enabled) {
       const statusText = document.getElementById("statusText");
       const deviceText = document.getElementById("deviceText");
-      const resultList = document.getElementById("resultList");
 
       if (statusText) statusText.textContent = "Đã ngắt";
       if (deviceText) deviceText.textContent = "Chưa có dữ liệu";
-
-      if (resultList) {
-        resultList.innerHTML = `
-          <div class="result-empty">Chưa có dữ liệu nhận diện</div>
-        `;
-      }
 
       addLog("Đã tắt nhận dữ liệu từ thiết bị.");
       refreshPreview();
@@ -72,41 +65,56 @@ async function stopStream() {
   }
 }
 
-function renderDetectionResults(data) {
+function showHistoryImage(imageUrl) {
+  const img = document.getElementById("previewImage");
+  const placeholder = document.getElementById("previewPlaceholder");
+
+  if (!img || !placeholder) return;
+
+  img.src = imageUrl + "?t=" + Date.now();
+  img.classList.remove("hidden");
+  img.style.display = "block";
+
+  placeholder.classList.add("hidden");
+  placeholder.style.display = "none";
+}
+
+function renderDetectionHistory(items) {
   const resultList = document.getElementById("resultList");
   if (!resultList) return;
 
-  if (!data.image_url) {
+  if (!items || items.length === 0) {
     resultList.innerHTML = `
       <div class="result-empty">Chưa có dữ liệu nhận diện</div>
     `;
     return;
   }
 
-  if (Array.isArray(data.detections) && data.detections.length > 0) {
-    resultList.innerHTML = data.detections.map(item => `
-      <div class="result-item fade-item">
-        <strong>${item.label}</strong>
-        <span>Độ tin cậy: ${item.confidence}</span>
-      </div>
-    `).join("");
-    return;
-  }
+  resultList.innerHTML = items.map((item) => {
+    const labels = item.detections
+      .map(det => `${det.label} (${det.confidence})`)
+      .join(", ");
 
-  resultList.innerHTML = `
-    <div class="result-item fade-item">
-      <strong>Ảnh mới đã nhận</strong>
-      <span>Thiết bị: ${data.device || "Không xác định"}</span>
-    </div>
-    <div class="result-item fade-item">
-      <strong>Thời gian</strong>
-      <span>${data.time || "--:--:--"}</span>
-    </div>
-    <div class="result-item fade-item">
-      <strong>Trạng thái</strong>
-      <span>Chưa có nhãn nhận diện chi tiết</span>
-    </div>
-  `;
+    return `
+      <div class="result-item fade-item history-item" onclick="showHistoryImage('${item.image_url}')">
+        <strong>${labels}</strong>
+        <span>Thiết bị: ${item.device}</span>
+        <span>Thời gian: ${item.time}</span>
+      </div>
+    `;
+  }).join("");
+}
+
+async function refreshDetectionHistory() {
+  try {
+    const res = await fetch("/api/detection-history?t=" + Date.now(), {
+      cache: "no-store"
+    });
+    const data = await res.json();
+    renderDetectionHistory(data.items || []);
+  } catch (err) {
+    addLog("Không tải được lịch sử nhận diện.");
+  }
 }
 
 async function refreshPreview() {
@@ -155,15 +163,15 @@ async function refreshPreview() {
       }
     }
 
-    renderDetectionResults(data);
+    await refreshDetectionHistory();
   } catch (err) {
     addLog("Không tải được khung hình hiện tại.");
   }
 }
 
 function runDetectDemo() {
-  refreshPreview();
-  addLog("Đã làm mới dữ liệu nhận diện.");
+  refreshDetectionHistory();
+  addLog("Đã làm mới lịch sử nhận diện.");
 }
 
 window.onload = () => {
