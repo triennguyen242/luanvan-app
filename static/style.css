@@ -265,9 +265,15 @@ img {
   font-size: 18px;
 }
 
-.result-item span {
-  display: block;
-  margin-top: 4px;
+.result-meta {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  flex-wrap: wrap;
+  margin-top: 6px;
+}
+
+.result-meta span {
   color: #d6e3f7;
   font-size: 14px;
   line-height: 1.5;
