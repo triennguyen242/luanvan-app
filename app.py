@@ -23,7 +23,9 @@ latest_frame_url = None
 latest_device = "Chưa có dữ liệu"
 latest_time = "--:--"
 latest_upload_dt = None
-latest_detections = []
+
+# Danh sách phát hiện, mới nhất nằm đầu
+detection_history = []
 
 
 @app.get("/", response_class=HTMLResponse)
@@ -78,8 +80,14 @@ async def latest_frame():
         "device": latest_device,
         "time": latest_time,
         "enabled": stream_enabled,
-        "connected": connected,
-        "detections": latest_detections
+        "connected": connected
+    }
+
+
+@app.get("/api/detection-history")
+async def get_detection_history():
+    return {
+        "items": detection_history
     }
 
 
@@ -90,7 +98,7 @@ async def upload_frame(
     api_key: str = Form(...),
     detections: str = Form("")
 ):
-    global latest_frame_url, latest_device, latest_time, latest_upload_dt, latest_detections
+    global latest_frame_url, latest_device, latest_time, latest_upload_dt, detection_history
 
     if api_key != API_KEY:
         raise HTTPException(status_code=401, detail="API key không hợp lệ")
@@ -124,7 +132,18 @@ async def upload_frame(
             except ValueError:
                 pass
 
-    latest_detections = parsed_detections
+    # Chỉ thêm vào lịch sử khi thật sự có phát hiện
+    if parsed_detections:
+        history_item = {
+            "id": timestamp,
+            "time": latest_time,
+            "device": device,
+            "image_url": latest_frame_url,
+            "detections": parsed_detections
+        }
+
+        detection_history.insert(0, history_item)
+        detection_history = detection_history[:10]
 
     return {
         "status": "ok",
