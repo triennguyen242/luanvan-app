@@ -133,7 +133,7 @@ async function refreshPreview() {
 
     if (img && placeholder) {
       if (data.image_url) {
-        img.src = data.image_url + "?t=" + Date.now();
+        img.src = "/api/latest-frame-image?t=" + Date.now();
         img.classList.remove("hidden");
         img.style.display = "block";
         img.classList.add("pulse-frame");
