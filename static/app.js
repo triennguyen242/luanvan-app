@@ -132,8 +132,11 @@ async function refreshPreview() {
     const statusText = document.getElementById("statusText");
 
     if (img && placeholder) {
-      if (data.image_url) {
-        img.src = "/api/latest-frame-image?t=" + Date.now();
+      if (data.connected) {
+        if (img.getAttribute('data-streaming') !== 'true') {
+          img.src = "/api/video-stream?t=" + Date.now();
+          img.setAttribute('data-streaming', 'true');
+        }
         img.classList.remove("hidden");
         img.style.display = "block";
         img.classList.add("pulse-frame");
@@ -141,6 +144,7 @@ async function refreshPreview() {
         placeholder.classList.add("hidden");
         placeholder.style.display = "none";
       } else {
+        img.setAttribute('data-streaming', 'false');
         img.classList.add("hidden");
         img.style.display = "none";
 
@@ -179,5 +183,5 @@ function runDetectDemo() {
 window.onload = () => {
   checkHealth();
   refreshPreview();
-  setInterval(refreshPreview, 2000);
+  setInterval(refreshPreview, 1000); // Thống kê nhận diện mượt hơn (1s/lần)
 };
