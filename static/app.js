@@ -133,21 +133,13 @@ async function refreshPreview() {
 
     if (img && placeholder) {
       if (data.connected) {
-        if (img.getAttribute('data-streaming') !== 'true') {
-          img.src = "/api/video-stream?t=" + Date.now();
-          img.setAttribute('data-streaming', 'true');
-        }
         img.classList.remove("hidden");
         img.style.display = "block";
-        img.classList.add("pulse-frame");
-
         placeholder.classList.add("hidden");
         placeholder.style.display = "none";
       } else {
-        img.setAttribute('data-streaming', 'false');
         img.classList.add("hidden");
         img.style.display = "none";
-
         placeholder.classList.remove("hidden");
         placeholder.style.display = "block";
       }
@@ -180,8 +172,32 @@ function runDetectDemo() {
   addLog("Đã làm mới lịch sử nhận diện.");
 }
 
+let streamInterval = null;
+
+function startFastPolling() {
+  if (streamInterval) clearInterval(streamInterval);
+  streamInterval = setInterval(() => {
+    const img = document.getElementById("previewImage");
+    // Chỉ giật hình nếu đang kết nối và ảnh đang bật
+    if (img && img.style.display !== "none") {
+      fetch("/api/latest-frame-image?t=" + Date.now())
+        .then(r => {
+          if (!r.ok) throw new Error("Chưa có frame");
+          return r.blob();
+        })
+        .then(blob => {
+          // Dùng BlobObjectURL để hiển thị siêu nhanh, không chớp giật
+          const objectURL = URL.createObjectURL(blob);
+          img.onload = () => URL.revokeObjectURL(objectURL);
+          img.src = objectURL;
+        }).catch(e => {});
+    }
+  }, 120); // ~8 FPS, giật mượt mà qua khỏi bộ lọc của Cloadflare/Render
+}
+
 window.onload = () => {
   checkHealth();
   refreshPreview();
+  startFastPolling();
   setInterval(refreshPreview, 1000); // Thống kê nhận diện mượt hơn (1s/lần)
 };
