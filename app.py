@@ -1,5 +1,5 @@
 from fastapi import FastAPI, Request, UploadFile, File, Form, HTTPException
-from fastapi.responses import HTMLResponse, Response, StreamingResponse
+from fastapi.responses import HTMLResponse, Response
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from pathlib import Path
@@ -121,21 +121,7 @@ async def upload_frame(
     # Đọc file vào bộ nhớ để serve nhanh
     file_bytes = await file.read()
     latest_frame_bytes = file_bytes
-
-    # Vẫn lưu file cho history
-    timestamp = now_vn.strftime("%Y%m%d_%H%M%S_%f")
-    ext = Path(file.filename).suffix or ".jpg"
-    filename = f"frame_{timestamp}{ext}"
-    save_path = UPLOAD_DIR / filename
-
-    with save_path.open("wb") as buffer:
-        buffer.write(file_bytes)
-
-    latest_frame_url = f"/uploads/{filename}"
-    latest_device = device
-    latest_time = now_vn.strftime("%H:%M:%S")
-    latest_upload_dt = now_vn
-
+    
     # Parse detections string (format: "label:conf | label:conf")
     parsed_detections = []
     if detections.strip():
@@ -149,6 +135,26 @@ async def upload_frame(
                 })
             except ValueError:
                 pass
+
+    if parsed_detections:
+        # Nhường event loop, đẩy việc ghi file vào thread riêng để không gây lag server
+        timestamp = now_vn.strftime("%Y%m%d_%H%M%S_%f")
+        ext = Path(file.filename).suffix or ".jpg"
+        filename = f"frame_{timestamp}{ext}"
+        save_path = UPLOAD_DIR / filename
+        
+        def save_file():
+            with save_path.open("wb") as buffer:
+                buffer.write(file_bytes)
+        
+        await asyncio.to_thread(save_file)
+        latest_frame_url = f"/uploads/{filename}"
+    else:
+        latest_frame_url = None
+
+    latest_device = device
+    latest_time = now_vn.strftime("%H:%M:%S")
+    latest_upload_dt = now_vn
 
     latest_detections = parsed_detections
 
@@ -182,29 +188,6 @@ async def latest_frame_image():
     if latest_frame_bytes is None:
         raise HTTPException(status_code=404, detail="Chưa có frame")
     return Response(content=latest_frame_bytes, media_type="image/jpeg")
-
-
-async def frame_generator():
-    """Generator sinh ra luồng video MJPEG từ các frame trong bộ nhớ"""
-    last_count = 0
-    while True:
-        if not stream_enabled:
-            await asyncio.sleep(0.5)
-            continue
-            
-        if frame_count > last_count and latest_frame_bytes:
-            last_count = frame_count
-            yield (b'--frame\r\n'
-                   b'Content-Type: image/jpeg\r\n\r\n' + latest_frame_bytes + b'\r\n')
-        
-        # Ngủ tối đa ~20FPS (50ms) để không ngốn CPU
-        await asyncio.sleep(0.05)
-
-
-@app.get("/api/video-stream")
-async def video_stream():
-    """Endpoint truyền video mượt mà qua chuẩn MJPEG (multipart/x-mixed-replace)"""
-    return StreamingResponse(frame_generator(), media_type="multipart/x-mixed-replace; boundary=frame")
 
 
 @app.get("/api/stats")
