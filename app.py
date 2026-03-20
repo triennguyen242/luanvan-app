@@ -1,5 +1,5 @@
 from fastapi import FastAPI, Request, UploadFile, File, Form, HTTPException
-from fastapi.responses import HTMLResponse
+from fastapi.responses import HTMLResponse, Response
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from pathlib import Path
@@ -21,13 +21,16 @@ templates = Jinja2Templates(directory="templates")
 
 API_KEY = "trien123"
 
-stream_enabled = False
+stream_enabled = True   # Mặc định BẬT để Pi gửi frame ngay khi server chạy
 latest_frame_url = None
+latest_frame_bytes = None  # Lưu frame JPEG trong bộ nhớ để serve nhanh
 latest_device = "Chưa có dữ liệu"
 latest_time = "--:--"
 latest_upload_dt = None
+latest_detections = []  # Danh sách detection hiện tại
 
 detection_history = []
+frame_count = 0  # Đếm số frame đã nhận
 
 
 @app.get("/", response_class=HTMLResponse)
@@ -100,29 +103,38 @@ async def upload_frame(
     api_key: str = Form(...),
     detections: str = Form("")
 ):
-    global latest_frame_url, latest_device, latest_time, latest_upload_dt, detection_history
+    global latest_frame_url, latest_frame_bytes, latest_device, latest_time
+    global latest_upload_dt, latest_detections, detection_history, frame_count
 
     if api_key != API_KEY:
+        print(f"[UPLOAD] ✘ API key sai từ {device}")
         raise HTTPException(status_code=401, detail="API key không hợp lệ")
 
     if not stream_enabled:
         raise HTTPException(status_code=403, detail="Hệ thống chưa bật nhận dữ liệu")
 
     now_vn = datetime.now(VN_TZ)
+    frame_count += 1
 
-    timestamp = now_vn.strftime("%Y%m%d_%H%M%S")
+    # Đọc file vào bộ nhớ để serve nhanh
+    file_bytes = await file.read()
+    latest_frame_bytes = file_bytes
+
+    # Vẫn lưu file cho history
+    timestamp = now_vn.strftime("%Y%m%d_%H%M%S_%f")
     ext = Path(file.filename).suffix or ".jpg"
     filename = f"frame_{timestamp}{ext}"
     save_path = UPLOAD_DIR / filename
 
     with save_path.open("wb") as buffer:
-        shutil.copyfileobj(file.file, buffer)
+        buffer.write(file_bytes)
 
     latest_frame_url = f"/uploads/{filename}"
     latest_device = device
     latest_time = now_vn.strftime("%H:%M:%S")
     latest_upload_dt = now_vn
 
+    # Parse detections string (format: "label:conf | label:conf")
     parsed_detections = []
     if detections.strip():
         items = [x.strip() for x in detections.split("|") if x.strip()]
@@ -136,6 +148,8 @@ async def upload_frame(
             except ValueError:
                 pass
 
+    latest_detections = parsed_detections
+
     if parsed_detections:
         history_item = {
             "id": timestamp,
@@ -146,9 +160,48 @@ async def upload_frame(
         }
 
         detection_history.insert(0, history_item)
-        detection_history = detection_history[:10]
+        detection_history = detection_history[:50]  # Giữ 50 mục
+
+    # Log mỗi 10 frame
+    if frame_count % 10 == 1:
+        det_str = ", ".join([f"{d['label']}({d['confidence']})" for d in parsed_detections]) or "none"
+        print(f"[UPLOAD] ✔ Frame #{frame_count} từ {device} | Detections: {det_str}")
 
     return {
         "status": "ok",
-        "image_url": latest_frame_url
+        "image_url": latest_frame_url,
+        "frame_count": frame_count
+    }
+
+
+@app.get("/api/latest-frame-image")
+async def latest_frame_image():
+    """Trả về JPEG frame mới nhất trực tiếp từ bộ nhớ (nhanh hơn static file)."""
+    if latest_frame_bytes is None:
+        raise HTTPException(status_code=404, detail="Chưa có frame")
+    return Response(content=latest_frame_bytes, media_type="image/jpeg")
+
+
+@app.get("/api/stats")
+async def get_stats():
+    """Thống kê realtime: số côn trùng, thiết bị, trạng thái kết nối."""
+    connected = False
+    if latest_upload_dt and stream_enabled:
+        connected = (datetime.now(VN_TZ) - latest_upload_dt) <= timedelta(seconds=12)
+
+    # Đếm theo loại
+    label_counts = {}
+    for det in latest_detections:
+        label = det["label"]
+        label_counts[label] = label_counts.get(label, 0) + 1
+
+    return {
+        "connected": connected,
+        "enabled": stream_enabled,
+        "device": latest_device,
+        "time": latest_time,
+        "frame_count": frame_count,
+        "total_objects": len(latest_detections),
+        "details": label_counts,
+        "detections": latest_detections
     }
