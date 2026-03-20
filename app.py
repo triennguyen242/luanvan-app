@@ -1,9 +1,10 @@
-from fastapi import FastAPI, Request, UploadFile, File, Form, HTTPException
+from fastapi import FastAPI, Request, UploadFile, File, Form, HTTPException, WebSocket, WebSocketDisconnect
 from fastapi.responses import HTMLResponse, Response
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from pathlib import Path
 import shutil
+import json
 from datetime import datetime, timedelta
 from zoneinfo import ZoneInfo
 import uvicorn
@@ -25,14 +26,36 @@ API_KEY = "trien123"
 
 stream_enabled = True   # Mặc định BẬT để Pi gửi frame ngay khi server chạy
 latest_frame_url = None
-latest_frame_bytes = None  # Lưu frame JPEG trong bộ nhớ để serve nhanh
-latest_device = "Chưa có dữ liệu"
+latest_frame_bytes = None
+latest_device = "Chưa có"
 latest_time = "--:--"
 latest_upload_dt = None
-latest_detections = []  # Danh sách detection hiện tại
-
+latest_detections = []
 detection_history = []
-frame_count = 0  # Đếm số frame đã nhận
+frame_count = 0
+
+# --- CƠ CHẾ WEBSOCKET MANAGER ---
+class ConnectionManager:
+    def __init__(self):
+        self.active_connections: list[WebSocket] = []
+
+    async def connect(self, websocket: WebSocket):
+        await websocket.accept()
+        self.active_connections.append(websocket)
+
+    def disconnect(self, websocket: WebSocket):
+        if websocket in self.active_connections:
+            self.active_connections.remove(websocket)
+
+    async def broadcast_bytes(self, data: bytes):
+        for connection in self.active_connections.copy():
+            try:
+                await connection.send_bytes(data)
+            except Exception:
+                self.disconnect(connection)
+
+stream_manager = ConnectionManager()
+# --------------------------------
 
 
 @app.get("/", response_class=HTMLResponse)
@@ -102,23 +125,22 @@ async def get_detection_history():
 async def upload_frame(
     file: UploadFile = File(...),
     device: str = Form("Raspberry / Camera"),
-    api_key: str = Form(...),
+    api_key: str = Form(""),
     detections: str = Form("")
 ):
+    """(CŨ - VẪN GIỮ ĐỀ PHÒNG) API nhận ảnh nén JPEG và list string detections từ Raspberry Pi."""
     global latest_frame_url, latest_frame_bytes, latest_device, latest_time
     global latest_upload_dt, latest_detections, detection_history, frame_count
 
-    if api_key != API_KEY:
-        print(f"[UPLOAD] ✘ API key sai từ {device}")
-        raise HTTPException(status_code=401, detail="API key không hợp lệ")
+    if api_key != "trien123":
+        raise HTTPException(status_code=403, detail="Sai API Key")
 
     if not stream_enabled:
         raise HTTPException(status_code=403, detail="Hệ thống chưa bật nhận dữ liệu")
 
     now_vn = datetime.now(VN_TZ)
     frame_count += 1
-
-    # Đọc file vào bộ nhớ để serve nhanh
+    
     file_bytes = await file.read()
     latest_frame_bytes = file_bytes
     
@@ -155,7 +177,6 @@ async def upload_frame(
     latest_device = device
     latest_time = now_vn.strftime("%H:%M:%S")
     latest_upload_dt = now_vn
-
     latest_detections = parsed_detections
 
     if parsed_detections:
@@ -168,17 +189,15 @@ async def upload_frame(
         }
 
         detection_history.insert(0, history_item)
-        detection_history = detection_history[:50]  # Giữ 50 mục
+        detection_history = detection_history[:10]
 
-    # Log mỗi 10 frame
-    if frame_count % 10 == 1:
-        det_str = ", ".join([f"{d['label']}({d['confidence']})" for d in parsed_detections]) or "none"
-        print(f"[UPLOAD] ✔ Frame #{frame_count} từ {device} | Detections: {det_str}")
+    # Phát qua WebSocket cho các trình duyệt đang xem nếu mún tích hợp
+    if latest_frame_bytes:
+        await stream_manager.broadcast_bytes(latest_frame_bytes)
 
     return {
         "status": "ok",
-        "image_url": latest_frame_url,
-        "frame_count": frame_count
+        "image_url": latest_frame_url
     }
 
 
