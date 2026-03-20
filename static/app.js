@@ -172,48 +172,40 @@ function runDetectDemo() {
   addLog("Đã làm mới lịch sử nhận diện.");
 }
 
-let isPolling = false;
+let wsStream = null;
 
-function fetchNextFrame() {
-  if (!isPolling) return;
-  const img = document.getElementById("previewImage");
-
-  // Nếu khung ảnh đang bị ẩn (đóng kết nối), đợi 100ms rồi kiểm tra lại
-  if (!img || img.style.display === "none") {
-    setTimeout(fetchNextFrame, 100);
-    return;
-  }
-
-  fetch("/api/latest-frame-image?t=" + Date.now())
-    .then(r => {
-      if (!r.ok) throw new Error("Chưa có frame");
-      return r.blob();
-    })
-    .then(blob => {
+function startWebSocketStream() {
+  if (wsStream) wsStream.close();
+  
+  const protocol = window.location.protocol === "https:" ? "wss://" : "ws://";
+  const wsUrl = protocol + window.location.host + "/ws/stream";
+  
+  wsStream = new WebSocket(wsUrl);
+  
+  wsStream.onopen = () => {
+    addLog("Đã kết nối luồng Video (WebSocket).");
+  };
+  
+  wsStream.onmessage = (event) => {
+    const img = document.getElementById("previewImage");
+    if (img && img.style.display !== "none") {
+      // Nhận trực tiếp ảnh Binary (Blob) siêu nhẹ
+      const blob = event.data;
       const objectURL = URL.createObjectURL(blob);
-      img.onload = () => {
-        URL.revokeObjectURL(objectURL);
-        // Tải ảnh vội ngay khi ảnh trước ĐÃ XONG -> Tốc độ tẹt ga (Unlimited FPS) mà không lag bộ nhớ browser
-        if (isPolling) requestAnimationFrame(fetchNextFrame);
-      };
-      // Gán source kích hoạt onload
+      img.onload = () => URL.revokeObjectURL(objectURL);
       img.src = objectURL;
-    })
-    .catch(e => {
-      if (isPolling) setTimeout(fetchNextFrame, 100);
-    });
-}
-
-function startFastPolling() {
-  if (!isPolling) {
-    isPolling = true;
-    fetchNextFrame();
-  }
+    }
+  };
+  
+  wsStream.onclose = () => {
+    // Thử kết nối lại nếu bị đứt quãng
+    setTimeout(startWebSocketStream, 2000);
+  };
 }
 
 window.onload = () => {
   checkHealth();
   refreshPreview();
-  startFastPolling();
+  startWebSocketStream();
   setInterval(refreshPreview, 1000); // Thống kê nhận diện mượt hơn (1s/lần)
 };
