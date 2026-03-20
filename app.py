@@ -1,11 +1,13 @@
 from fastapi import FastAPI, Request, UploadFile, File, Form, HTTPException
-from fastapi.responses import HTMLResponse, Response
+from fastapi.responses import HTMLResponse, Response, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from pathlib import Path
 import shutil
 from datetime import datetime, timedelta
 from zoneinfo import ZoneInfo
+import uvicorn
+import asyncio
 
 app = FastAPI()
 
@@ -182,6 +184,29 @@ async def latest_frame_image():
     return Response(content=latest_frame_bytes, media_type="image/jpeg")
 
 
+async def frame_generator():
+    """Generator sinh ra luồng video MJPEG từ các frame trong bộ nhớ"""
+    last_count = 0
+    while True:
+        if not stream_enabled:
+            await asyncio.sleep(0.5)
+            continue
+            
+        if frame_count > last_count and latest_frame_bytes:
+            last_count = frame_count
+            yield (b'--frame\r\n'
+                   b'Content-Type: image/jpeg\r\n\r\n' + latest_frame_bytes + b'\r\n')
+        
+        # Ngủ tối đa ~20FPS (50ms) để không ngốn CPU
+        await asyncio.sleep(0.05)
+
+
+@app.get("/api/video-stream")
+async def video_stream():
+    """Endpoint truyền video mượt mà qua chuẩn MJPEG (multipart/x-mixed-replace)"""
+    return StreamingResponse(frame_generator(), media_type="multipart/x-mixed-replace; boundary=frame")
+
+
 @app.get("/api/stats")
 async def get_stats():
     """Thống kê realtime: số côn trùng, thiết bị, trạng thái kết nối."""
@@ -205,3 +230,8 @@ async def get_stats():
         "details": label_counts,
         "detections": latest_detections
     }
+
+if __name__ == "__main__":
+    print("[SERVER] Đang khởi động Web Server luanvan-app-main...")
+    print("[SERVER] Chú ý: Hãy chắc chắn bạn đã CHO PHÉP (Allow) Python băng qua Tường lửa (Windows Firewall)!")
+    uvicorn.run("app:app", host="0.0.0.0", port=8000, reload=False)
