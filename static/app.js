@@ -172,27 +172,43 @@ function runDetectDemo() {
   addLog("Đã làm mới lịch sử nhận diện.");
 }
 
-let streamInterval = null;
+let isPolling = false;
+
+function fetchNextFrame() {
+  if (!isPolling) return;
+  const img = document.getElementById("previewImage");
+
+  // Nếu khung ảnh đang bị ẩn (đóng kết nối), đợi 100ms rồi kiểm tra lại
+  if (!img || img.style.display === "none") {
+    setTimeout(fetchNextFrame, 100);
+    return;
+  }
+
+  fetch("/api/latest-frame-image?t=" + Date.now())
+    .then(r => {
+      if (!r.ok) throw new Error("Chưa có frame");
+      return r.blob();
+    })
+    .then(blob => {
+      const objectURL = URL.createObjectURL(blob);
+      img.onload = () => {
+        URL.revokeObjectURL(objectURL);
+        // Tải ảnh vội ngay khi ảnh trước ĐÃ XONG -> Tốc độ tẹt ga (Unlimited FPS) mà không lag bộ nhớ browser
+        if (isPolling) requestAnimationFrame(fetchNextFrame);
+      };
+      // Gán source kích hoạt onload
+      img.src = objectURL;
+    })
+    .catch(e => {
+      if (isPolling) setTimeout(fetchNextFrame, 100);
+    });
+}
 
 function startFastPolling() {
-  if (streamInterval) clearInterval(streamInterval);
-  streamInterval = setInterval(() => {
-    const img = document.getElementById("previewImage");
-    // Chỉ giật hình nếu đang kết nối và ảnh đang bật
-    if (img && img.style.display !== "none") {
-      fetch("/api/latest-frame-image?t=" + Date.now())
-        .then(r => {
-          if (!r.ok) throw new Error("Chưa có frame");
-          return r.blob();
-        })
-        .then(blob => {
-          // Dùng BlobObjectURL để hiển thị siêu nhanh, không chớp giật
-          const objectURL = URL.createObjectURL(blob);
-          img.onload = () => URL.revokeObjectURL(objectURL);
-          img.src = objectURL;
-        }).catch(e => {});
-    }
-  }, 120); // ~8 FPS, giật mượt mà qua khỏi bộ lọc của Cloadflare/Render
+  if (!isPolling) {
+    isPolling = true;
+    fetchNextFrame();
+  }
 }
 
 window.onload = () => {
