@@ -233,7 +233,71 @@ async def get_stats():
         "detections": latest_detections
     }
 
+@app.websocket("/ws/stream")
+async def websocket_stream(websocket: WebSocket):
+    await stream_manager.connect(websocket)
+    try:
+        while True:
+            await websocket.receive_text()
+    except WebSocketDisconnect:
+        stream_manager.disconnect(websocket)
+
+@app.websocket("/ws/upload")
+async def websocket_upload(websocket: WebSocket):
+    await websocket.accept()
+    global latest_frame_bytes, latest_device, latest_time, latest_upload_dt, latest_detections, frame_count
+    
+    try:
+        while True:
+            # 1. Nhận cục diện mô tả (Text JSON)
+            data_text = await websocket.receive_text()
+            meta_data = json.loads(data_text)
+            
+            # 2. Nhận nguyên cục ảnh (Binary Bytes)
+            data_bytes = await websocket.receive_bytes()
+            
+            if meta_data.get("api_key") != API_KEY:
+                await websocket.close(code=1008)
+                break
+                
+            if not stream_enabled:
+                continue
+
+            now_vn = datetime.now(VN_TZ)
+            frame_count += 1
+            latest_frame_bytes = data_bytes
+            
+            # Parse detections
+            detections_str = meta_data.get("detections", "")
+            parsed_detections = []
+            if detections_str.strip():
+                items = [x.strip() for x in detections_str.split("|") if x.strip()]
+                for item in items:
+                    try:
+                        label, confidence = item.split(":")
+                        parsed_detections.append({
+                            "label": label.strip(),
+                            "confidence": confidence.strip()
+                        })
+                    except ValueError:
+                        pass
+            
+            latest_device = meta_data.get("device", "Raspberry Pi Camera")
+            latest_time = now_vn.strftime("%H:%M:%S")
+            latest_upload_dt = now_vn
+            latest_detections = parsed_detections
+
+            await stream_manager.broadcast_bytes(latest_frame_bytes)
+            
+    except WebSocketDisconnect:
+        print("[UPLOAD] Pi disconnected.")
+    except Exception as e:
+        print(f"[UPLOAD] Lỗi: {e}")
+
 if __name__ == "__main__":
-    print("[SERVER] Đang khởi động Web Server luanvan-app-main...")
+    import os
+    port = int(os.environ.get("PORT", 5000))
+    print(f"[SERVER] Đang khởi động Web Server luanvan-app-main...")
+    print(f"[SERVER] Mở trình duyệt Web tại: http://localhost:{port} (local) hoặc trên Render")
     print("[SERVER] Chú ý: Hãy chắc chắn bạn đã CHO PHÉP (Allow) Python băng qua Tường lửa (Windows Firewall)!")
-    uvicorn.run("app:app", host="0.0.0.0", port=8000, reload=False)
+    uvicorn.run("app:app", host="0.0.0.0", port=port, reload=False)
